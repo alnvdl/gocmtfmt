@@ -16,8 +16,16 @@ var stdin = os.Stdin
 var stderr = os.Stderr
 var stdout = os.Stdout
 
-var defaultTabWidth = 4
-var defaultColumnWidth = 79
+const (
+	defaultTabWidth    = 4
+	defaultColumnWidth = 79
+)
+
+const (
+	exitSuccess = 0
+	exitError   = 1
+	exitUsage   = 2
+)
 
 func main() {
 	if status := run(os.Args[1:]); status != 0 {
@@ -28,23 +36,25 @@ func main() {
 func run(args []string) int {
 	flags := flag.NewFlagSet("gocmtfmt", flag.ContinueOnError)
 	flags.SetOutput(stderr)
+
 	list := flags.Bool("l", false, "list files that would be reformatted")
 	write := flags.Bool("w", false, "write result to source files instead of stdout")
 	columnWidth := flags.Int("c", defaultColumnWidth, "maximum column width")
 	tabWidth := flags.Int("t", defaultTabWidth, "tab size")
+
 	if err := flags.Parse(args); err != nil {
-		return 2
+		return exitUsage
 	}
 	if *columnWidth <= 0 || *tabWidth <= 0 {
 		fmt.Fprintln(stderr, "error: -c and -t must be greater than zero")
-		return 2
+		return exitUsage
 	}
 
 	var err error
 	if flags.NArg() == 0 {
 		if *write {
 			fmt.Fprintln(stderr, "error: cannot use -w with standard input")
-			return 2
+			return exitUsage
 		}
 		err = formatStdin(*list, *columnWidth, *tabWidth)
 	} else {
@@ -52,9 +62,9 @@ func run(args []string) int {
 	}
 	if err != nil {
 		fmt.Fprintln(stderr, err)
-		return 1
+		return exitError
 	}
-	return 0
+	return exitSuccess
 }
 
 func formatStdin(list bool, columnWidth, tabWidth int) error {

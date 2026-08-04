@@ -26,6 +26,10 @@ func formatFile(path string, tabWidth, columnWidth int) ([]byte, []byte, os.File
 }
 
 func formatSource(source []byte, filename string, tabWidth, columnWidth int) ([]byte, error) {
+	if hasDoNotEditMarker(source) {
+		return source, nil
+	}
+
 	source, err := format.Source(source)
 	if err != nil {
 		return nil, err
@@ -40,6 +44,14 @@ func formatSource(source []byte, filename string, tabWidth, columnWidth int) ([]
 	groups := lineCommentGroups(file, fileSet, source)
 	formatted := formatComments(source, fileSet, groups, tabWidth, columnWidth)
 	return format.Source(formatted)
+}
+
+func hasDoNotEditMarker(source []byte) bool {
+	firstLine := source
+	if before, _, ok := bytes.Cut(source, []byte{'\n'}); ok {
+		firstLine = before
+	}
+	return bytes.Contains(firstLine, []byte("DO NOT EDIT"))
 }
 
 func formatComments(source []byte, fileSet *token.FileSet, groups []*ast.CommentGroup, tabWidth, columnWidth int) []byte {

@@ -368,6 +368,10 @@ func Example() {
 		source:          "package sample\nfunc {",
 		wantSourceError: "2:6: expected 'IDENT', found '{'",
 	}, {
+		desc:   "skips sources marked DO NOT EDIT",
+		source: "// DO NOT EDIT.\n\n// This comment is very, very long, certainly long enough to wrap at a narrow width.\nvar value int\n",
+		want:   "// DO NOT EDIT.\n\n// This comment is very, very long, certainly long enough to wrap at a narrow width.\nvar value int\n",
+	}, {
 		desc: "formatFile reports a missing file",
 		filePath: func(dir string) string {
 			return filepath.Join(dir, "sample.go")
