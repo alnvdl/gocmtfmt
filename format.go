@@ -8,17 +8,9 @@ import (
 	"go/parser"
 	"go/token"
 	"os"
-	"slices"
-	"sort"
 	"strings"
 	"unicode/utf8"
 )
-
-type replacement struct {
-	start int
-	end   int
-	text  []byte
-}
 
 func formatFile(path string, tabWidth, columnWidth int) ([]byte, []byte, os.FileInfo, error) {
 	info, err := os.Lstat(path)
@@ -46,28 +38,35 @@ func formatSource(source []byte, filename string, tabWidth, columnWidth int) ([]
 	}
 
 	groups := lineCommentGroups(file, fileSet, source)
-	replacements := make([]replacement, 0, len(groups))
+	formatted := formatComments(source, fileSet, groups, tabWidth, columnWidth)
+	return format.Source(formatted)
+}
+
+func formatComments(source []byte, fileSet *token.FileSet, groups []*ast.CommentGroup, tabWidth, columnWidth int) []byte {
+	var formatted bytes.Buffer
+	lastEnd := 0
 	for _, group := range groups {
 		start, end := commentOffsets(group, fileSet)
-		linePrefix, indent := lineIndent(source, start)
-		comment := stripIndent(source[start:end])
-		formatted := formatComment(extractContent(comment), columnWidth-indentWidth(linePrefix, tabWidth))
-		formatted = bytes.TrimSuffix(formatted, []byte("\n"))
-		continuationIndent := indent
-		if indent == nil {
-			continuationIndent = makeIndent(indentWidth(linePrefix, tabWidth), tabWidth)
-		}
-		formatted = prependIndent(formatted, continuationIndent)
-		replacements = append(replacements, replacement{start: start, end: end, text: formatted})
+		formatted.Write(source[lastEnd:start])
+		formatted.Write(formatCommentGroup(source, group, fileSet, tabWidth, columnWidth))
+		lastEnd = end
 	}
-	sort.Slice(replacements, func(i, j int) bool {
-		return replacements[i].start < replacements[j].start
-	})
+	formatted.Write(source[lastEnd:])
+	return formatted.Bytes()
+}
 
-	for _, replacement := range slices.Backward(replacements) {
-		source = applyReplacement(source, replacement)
+func formatCommentGroup(source []byte, group *ast.CommentGroup, fileSet *token.FileSet, tabWidth, columnWidth int) []byte {
+	start, end := commentOffsets(group, fileSet)
+	linePrefix, indent := lineIndent(source, start)
+	formatted := formatComment(
+		extractContent(stripIndent(source[start:end])),
+		columnWidth-indentWidth(linePrefix, tabWidth),
+	)
+	formatted = bytes.TrimSuffix(formatted, []byte("\n"))
+	if indent == nil {
+		indent = makeIndent(indentWidth(linePrefix, tabWidth), tabWidth)
 	}
-	return format.Source(source)
+	return prependIndent(formatted, indent)
 }
 
 func commentOffsets(group *ast.CommentGroup, fileSet *token.FileSet) (start, end int) {
@@ -91,10 +90,6 @@ func lineIndent(source []byte, commentStart int) (linePrefix, indent []byte) {
 	return linePrefix, indent
 }
 
-func applyReplacement(source []byte, replacement replacement) []byte {
-	return append(source[:replacement.start], append(replacement.text, source[replacement.end:]...)...)
-}
-
 func isDirective(comment *ast.Comment) bool {
 	return len(comment.Text) >= 2 && comment.Text[:2] == "//" &&
 		len(comment.Text) > 2 && comment.Text[2] != ' '
@@ -102,27 +97,21 @@ func isDirective(comment *ast.Comment) bool {
 
 func lineCommentGroups(file *ast.File, fileSet *token.FileSet, source []byte) []*ast.CommentGroup {
 	var groups []*ast.CommentGroup
-	var current []*ast.Comment
-	flush := func() {
-		if len(current) > 0 {
-			groups = append(groups, &ast.CommentGroup{List: current})
-			current = nil
-		}
-	}
+	var current *ast.CommentGroup
 
 	for _, group := range file.Comments {
 		for _, comment := range group.List {
-			if isLineComment(comment, fileSet, source) {
-				if len(current) > 0 && !commentsAreAdjacent(current[len(current)-1], comment, fileSet, source) {
-					flush()
-				}
-				current = append(current, comment)
+			if !isLineComment(comment, fileSet, source) {
+				current = nil
 				continue
 			}
-			flush()
+			if current == nil || !commentsAreAdjacent(current.List[len(current.List)-1], comment, fileSet, source) {
+				current = &ast.CommentGroup{}
+				groups = append(groups, current)
+			}
+			current.List = append(current.List, comment)
 		}
 	}
-	flush()
 	return groups
 }
 
@@ -141,7 +130,7 @@ func commentsAreAdjacent(previous, current *ast.Comment, fileSet *token.FileSet,
 		return false
 	}
 	between := source[previousPosition.Offset:currentPosition.Offset]
-	return strings.TrimSpace(string(between)) == ""
+	return len(bytes.TrimSpace(between)) == 0
 }
 
 func prependIndent(comment, indent []byte) []byte {

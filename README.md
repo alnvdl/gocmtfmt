@@ -53,6 +53,13 @@ language constructs.
 
 ## Notes
 
+`gocmtfmt` is based on a slightly modified version of the standard library's
+[text comment printer](https://pkg.go.dev/go/doc/comment), which uses an
+algorithm for nicely reflowing paragraphs without necessarily making use of all
+available space.
+
+This tool is opinionated in the following ways:
+
 1. Unused [link definitions](https://go.dev/doc/comment#links) will be removed
    from comments.
 
@@ -70,10 +77,8 @@ language constructs.
    // one thing. Input B causes it to do something else.
    ```
 
-   This is intentional: `gocmtfmt` formats documentation exactly as `go doc`
-   displays it in text mode. It is based on a slightly modified version of the
-   standard library's text comment printer:
-   https://pkg.go.dev/go/doc/comment.
+   This is intentional: `gocmtfmt` formats documentation similarly to how
+   `go doc` and `pkgsite` present it.
 
 3. Trailing comments are not reformatted or reflowed:
    ```go
