@@ -27,12 +27,8 @@ go install github.com/alnvdl/gocmtfmt@latest
 
 Then run it with:
 ```sh
-gocmtfmt -w file.go
-```
-
-To run it on all files in a module:
-```sh
-find . -name '*.go' | xargs gocmtfmt -w
+gocmtfmt -w .       # Recursively formats all Go files in a directory.
+gocmtfmt -w file.go # Formats a single file.
 ```
 
 `gocmtfmt` does not support the `./...` syntax used by native `go fmt` tools.

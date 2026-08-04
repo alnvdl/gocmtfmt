@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -75,6 +76,69 @@ func TestRunFormatsPaths(t *testing.T) {
 	}
 	if got := readFile(t, path); !strings.Contains(got, "// This comment is long enough to wrap at a narrow\n") {
 		t.Errorf("written source is not formatted: %q", got)
+	}
+}
+
+func TestRunFormatsDirectoryRecursively(t *testing.T) {
+	setStreams(t, "")
+	dir := t.TempDir()
+	nestedDir := filepath.Join(dir, "nested")
+	if err := os.Mkdir(nestedDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	rootPath := filepath.Join(dir, "root.go")
+	nestedPath := filepath.Join(nestedDir, "nested.go")
+	unchangedPath := filepath.Join(dir, "unchanged.go")
+	nonGoPath := filepath.Join(nestedDir, "notes.txt")
+	for path, source := range map[string]string{
+		rootPath:      "package sample\n\n// This comment is long enough to wrap at a narrow width.\nvar value int\n",
+		nestedPath:    "package sample\n\n// This comment is long enough to wrap at a narrow width.\nvar value int\n",
+		unchangedPath: "package sample\n\nvar value int\n",
+		nonGoPath:     "not Go\n",
+	} {
+		if err := os.WriteFile(path, []byte(source), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if status := run([]string{"-l", "-c", "50", "-t", "8", dir}); status != 0 {
+		t.Fatalf("run() status = %d, want 0", status)
+	}
+	wantListed := nestedPath + "\n" + rootPath + "\n"
+	if got := readStream(t, stdout); got != wantListed {
+		t.Errorf("listed paths = %q, want %q", got, wantListed)
+	}
+
+	resetStream(t, stdout)
+	if status := run([]string{"-w", "-c", "50", "-t", "8", dir}); status != 0 {
+		t.Fatalf("run() status = %d, want 0", status)
+	}
+	if got := readStream(t, stdout); got != "" {
+		t.Errorf("stdout = %q, want empty output", got)
+	}
+	wantContents := map[string]string{
+		rootPath:      "package sample\n\n// This comment is long enough to wrap at a narrow\n// width.\nvar value int\n",
+		nestedPath:    "package sample\n\n// This comment is long enough to wrap at a narrow\n// width.\nvar value int\n",
+		unchangedPath: "package sample\n\nvar value int\n",
+		nonGoPath:     "not Go\n",
+	}
+	for path, want := range wantContents {
+		if got := readFile(t, path); got != want {
+			t.Errorf("%s = %q, want %q", path, got, want)
+		}
+	}
+}
+
+func TestRunReportsDirectoryWalkErrors(t *testing.T) {
+	setStreams(t, "")
+	path := filepath.Join(t.TempDir(), "missing")
+
+	if status := run([]string{path}); status != 1 {
+		t.Fatalf("run() status = %d, want 1", status)
+	}
+	if got, want := readStream(t, stderr), "lstat "+path+": no such file or directory\n"; got != want {
+		t.Errorf("stderr = %q, want %q", got, want)
 	}
 }
 

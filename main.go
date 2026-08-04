@@ -5,7 +5,10 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
+	"path/filepath"
+	"strings"
 )
 
 var exit = os.Exit
@@ -70,27 +73,48 @@ func formatStdin(list bool, columnWidth, tabWidth int) error {
 }
 
 func formatPaths(paths []string, list, write bool, columnWidth, tabWidth int) error {
-	for _, path := range paths {
-		source, formatted, info, err := formatFile(path, tabWidth, columnWidth)
-		if err != nil {
+	for _, root := range paths {
+		if err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
+			switch {
+			case err != nil:
+				return err
+			case entry.IsDir():
+				return nil
+			case path != root && !isGoFilename(entry.Name()):
+				return nil
+			}
+			return formatPath(path, list, write, columnWidth, tabWidth)
+		}); err != nil {
 			return err
-		}
-		changed := !bytes.Equal(source, formatted)
-		if list && changed {
-			if _, err := fmt.Fprintln(stdout, path); err != nil {
-				return err
-			}
-		}
-		if write && changed {
-			if err := os.WriteFile(path, formatted, info.Mode()); err != nil {
-				return err
-			}
-		}
-		if !list && !write {
-			if _, err := stdout.Write(formatted); err != nil {
-				return err
-			}
 		}
 	}
 	return nil
+}
+
+func formatPath(path string, list, write bool, columnWidth, tabWidth int) error {
+	source, formatted, info, err := formatFile(path, tabWidth, columnWidth)
+	if err != nil {
+		return err
+	}
+	changed := !bytes.Equal(source, formatted)
+	if list && changed {
+		if _, err := fmt.Fprintln(stdout, path); err != nil {
+			return err
+		}
+	}
+	if write && changed {
+		if err := os.WriteFile(path, formatted, info.Mode()); err != nil {
+			return err
+		}
+	}
+	if !list && !write {
+		if _, err := stdout.Write(formatted); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func isGoFilename(name string) bool {
+	return !strings.HasPrefix(name, ".") && strings.HasSuffix(name, ".go")
 }
