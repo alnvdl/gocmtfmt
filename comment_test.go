@@ -151,7 +151,7 @@ func TestFormatComment(t *testing.T) {
 // 	- Item 2 with more details and explanations that go on for a while to show how to handle long lines in lists.
 // 	- Item 3
 //
-// # Headings can also be present
+// # Headings can also be present and even if they are extremely long they won't be subject to reflow.
 //
 // Short comments in quick succession.
 // Are combined into a single paragraph.
@@ -216,7 +216,7 @@ func TestFormatComment(t *testing.T) {
 //     how to handle long lines in lists.
 //   - Item 3
 //
-// # Headings can also be present
+// # Headings can also be present and even if they are extremely long they won't be subject to reflow.
 //
 // Short comments in quick succession. Are combined into a single paragraph.
 // If they don't have line breaks between them.

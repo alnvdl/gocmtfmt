@@ -4,7 +4,9 @@
 
 // This file was copied from the go/doc/comment package in v1.26.5 (text.go)
 // and modified to provide a general purpose comment formatter that closely
-// matches the text representation of Go doc comments.
+// matches the text representation of Go doc comments. Ironically, this file is
+// not reformatted with gocmtfmt to make it easier to track changes from
+// upstream in the future.
 
 package main
 
@@ -105,14 +107,19 @@ func (p *cmtFormatter) block(out *bytes.Buffer, x comment.Block) {
 	case *comment.Heading:
 		out.WriteString(p.prefix)
 		out.WriteString("# ")
-		p.text(out, "", x.Text)
+		// Differently from the go/doc/comment package, we don't reflow
+		// headings, even if they are extremely long. This is by design because
+		// reflowing headings breaks interpretation by other tools, like
+		// pkgsite.
+		p.textUnwrapped(out, x.Text)
 
 	case *comment.Code:
 		text := x.Text
 		for text != "" {
 			var line string
-			// Using found is needed to avoid breaking code blocks in case of
-			// empty lines inside them.
+			// Differently from the go/doc/comment package, we check found
+			// returned by strings.Cut to avoid breaking code blocks in case of
+			// empty lines (without indent) inside of them.
 			var found bool
 			line, text, found = strings.Cut(text, "\n")
 			if found {
@@ -175,6 +182,14 @@ func (p *cmtFormatter) text(out *bytes.Buffer, indent string, x []comment.Text) 
 		}
 		writeNL(out)
 	}
+}
+
+// textUnwrapped prints the text sequence x to out as one long line.
+func (p *cmtFormatter) textUnwrapped(out *bytes.Buffer, x []comment.Text) {
+	p.oneLongLine(&p.long, x)
+	out.WriteString(p.long.String())
+	p.long.Reset()
+	writeNL(out)
 }
 
 // oneLongLine prints the text sequence x to out as one long line,
