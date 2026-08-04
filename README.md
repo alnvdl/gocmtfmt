@@ -3,20 +3,20 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/alnvdl/gocmtfmt.svg)](https://pkg.go.dev/github.com/alnvdl/gocmtfmt)
 [![Test workflow](https://github.com/alnvdl/gocmtfmt/actions/workflows/test.yaml/badge.svg)](https://github.com/alnvdl/gocmtfmt/actions/workflows/test.yaml)
 
-`gocmtfmt` wraps the content of all `//` Go comment blocks. It mainly reflows
+gocmtfmt formats and wraps `//` comments in Go code. It mainly reflows
 paragraphs and lists while preserving headings, code blocks, and other
 elements. It does **not** reflow code.
 
-`/* ... */` comment blocks are intentionally ignored, so users can keep comment
-blocks that should not be reformatted. This is useful, for example, when
+`/* ... */` comment blocks are intentionally ignored, so users can keep them
+for things that should not be reformatted. This is useful, for example, when
 commenting out code blocks.
 
 `gocmtfmt` has three goals:
-1. Limit the number of columns to make comments more readable.
-2. Make code comments look more like the output of tools such as `go doc` and
-   `pkgsite` to reduce surprises (see [Notes](#Notes)).
-3. Avoid the hassle of managing line breaks manually and finding files that
-   need reformatting to keep codebases more consistent.
+1. Make comments more readable by limiting the number of columns.
+2. Reduce surprises by making comments in code look more like the output of
+   tools such as `go doc` and `pkgsite` (see [Notes](#Notes)).
+3. Keep codebases more consistent by introducing an opinionated and unambiguous
+   way of formatting comments.
 
 ## Using
 
@@ -38,9 +38,9 @@ find . -name '*.go' | xargs gocmtfmt -w
 `gocmtfmt` does not support the `./...` syntax used by native `go fmt` tools.
 Instead, it works like plain `gofmt`.
 
-## Comparison to gofmt
+## Comparison with gofmt
 
-`gocmtfmt` complements `gofmt`; it is not a replacement. It applies the same
+`gocmtfmt` complements `gofmt`, it is not a replacement. It applies the same
 formatting as `gofmt` before and after processing each input file, but you can
 still continue to use `gofmt` in your pipeline if you like.
 
@@ -74,4 +74,3 @@ language constructs.
    displays it in text mode. It is based on a slightly modified version of the
    standard library's text comment printer:
    https://pkg.go.dev/go/doc/comment.
-

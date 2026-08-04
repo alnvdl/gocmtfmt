@@ -36,20 +36,21 @@ type cmtFormatter struct {
 	width      int
 }
 
+const prefix = "// "
+const codePrefix = "//\t"
+
 func formatComment(d *comment.Doc, lineWidth int) []byte {
-	tp := &cmtFormatter{
-		prefix:     "// ",
-		codePrefix: "//\t",
-	}
-
-	if tp.width == 0 {
-		tp.width = lineWidth - utf8.RuneCountInString(tp.prefix)
-	}
-
-	var out bytes.Buffer
 	if len(d.Content) == 0 && len(d.Links) == 0 {
 		return []byte("//\n")
 	}
+
+	tp := &cmtFormatter{
+		prefix:     prefix,
+		codePrefix: codePrefix,
+		width:      lineWidth - utf8.RuneCountInString(prefix),
+	}
+
+	var out bytes.Buffer
 	for i, x := range d.Content {
 		if i > 0 && blankBefore(x) {
 			out.WriteString(tp.prefix)
