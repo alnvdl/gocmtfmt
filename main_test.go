@@ -7,47 +7,86 @@ import (
 	"testing"
 )
 
-func TestRunFormatsStdin(t *testing.T) {
-	setStreams(t, "package sample\n\n// This comment is long enough to wrap at a narrow width.\nvar value int\n")
-
-	if status := run([]string{"-c", "50"}); status != 0 {
-		t.Fatalf("run() status = %d, want 0", status)
+func TestRunStdin(t *testing.T) {
+	tests := []struct {
+		name string
+		args []string
+		want string
+	}{
+		{
+			name: "formats input",
+			args: []string{"-c", "50"},
+			want: "package sample\n\n// This comment is long enough to wrap at a narrow\n// width.\nvar value int\n",
+		},
+		{
+			name: "lists changed input without writing output",
+			args: []string{"-l", "-c", "50"},
+			// want is empty because the input is from stdin, so there is no
+			// path to list.
+		},
 	}
 
-	got := readStream(t, stdout)
-	want := "package sample\n\n// This comment is long enough to wrap at a narrow\n// width.\nvar value int\n"
-	if got != want {
-		t.Errorf("formatted stdin = %q, want %q", got, want)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			setStreams(t, "package sample\n\n// This comment is long enough to wrap at a narrow width.\nvar value int\n")
+
+			if status := run(test.args); status != 0 {
+				t.Fatalf("run() status = %d, want 0", status)
+			}
+			if got := readStream(t, stdout); got != test.want {
+				t.Errorf("stdout = %q, want %q", got, test.want)
+			}
+		})
 	}
 }
 
-func TestMainExitsWithRunnerStatus(t *testing.T) {
-	setStreams(t, "package sample\n")
-	oldArgs, oldExit := os.Args, exit
-	t.Cleanup(func() {
-		os.Args, exit = oldArgs, oldExit
-	})
-	os.Args = []string{"gocmtfmt", "-c", "0"}
-	var gotStatus int
-	exit = func(status int) {
-		gotStatus = status
-	}
+func TestMainExitCodes(t *testing.T) {
+	tests := []struct {
+		name           string
+		args           []string
+		wantExitCalled bool
+		wantStatus     int
+	}{{
+		name:           "success",
+		args:           []string{"-c", "50"},
+		wantExitCalled: false,
+		wantStatus:     0,
+	}, {
+		name:           "runner error",
+		args:           []string{"missing.go"},
+		wantExitCalled: true,
+		wantStatus:     1,
+	}, {
+		name:           "usage error",
+		args:           []string{"-c", "0"},
+		wantExitCalled: true,
+		wantStatus:     2,
+	}}
 
-	main()
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			setStreams(t, "package sample\n")
+			oldArgs, oldExit := os.Args, exit
+			t.Cleanup(func() {
+				os.Args, exit = oldArgs, oldExit
+			})
+			os.Args = append([]string{"gocmtfmt"}, test.args...)
+			exitCalled := false
+			gotStatus := 0
+			exit = func(status int) {
+				exitCalled = true
+				gotStatus = status
+			}
 
-	if gotStatus != 2 {
-		t.Errorf("exit status = %d, want 2", gotStatus)
-	}
-}
+			main()
 
-func TestRunListsChangedStdinWithoutWritingOutput(t *testing.T) {
-	setStreams(t, "package sample\n\n// This comment is long enough to wrap at a narrow width.\nvar value int\n")
-
-	if status := run([]string{"-l", "-c", "50"}); status != 0 {
-		t.Fatalf("run() status = %d, want 0", status)
-	}
-	if got := readStream(t, stdout); got != "" {
-		t.Errorf("stdout = %q, want empty output", got)
+			if exitCalled != test.wantExitCalled {
+				t.Errorf("exit called = %t, want %t", exitCalled, test.wantExitCalled)
+			}
+			if gotStatus != test.wantStatus {
+				t.Errorf("exit status = %d, want %d", gotStatus, test.wantStatus)
+			}
+		})
 	}
 }
 
