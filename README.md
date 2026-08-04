@@ -18,7 +18,7 @@ elements. It formats, but does **not** wrap regular code.
 
 Install it with:
 ```sh
-go install github.com/alnvdl/gocmtfmt@latest
+go install github.com/alnvdl/gocmtfmt@v1.0.0
 ```
 
 Then run it with:
