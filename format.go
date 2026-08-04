@@ -102,11 +102,6 @@ func lineIndent(source []byte, commentStart int) (linePrefix, indent []byte) {
 	return linePrefix, indent
 }
 
-func isDirective(comment *ast.Comment) bool {
-	return len(comment.Text) >= 2 && comment.Text[:2] == "//" &&
-		len(comment.Text) > 2 && comment.Text[2] != ' '
-}
-
 func lineCommentGroups(file *ast.File, fileSet *token.FileSet, source []byte) []*ast.CommentGroup {
 	var groups []*ast.CommentGroup
 	var current *ast.CommentGroup
@@ -128,7 +123,10 @@ func lineCommentGroups(file *ast.File, fileSet *token.FileSet, source []byte) []
 }
 
 func isLineComment(comment *ast.Comment, fileSet *token.FileSet, source []byte) bool {
-	if !strings.HasPrefix(comment.Text, "//") || isDirective(comment) {
+	if !strings.HasPrefix(comment.Text, "//") {
+		return false
+	}
+	if _, ok := ast.ParseDirective(comment.Slash, comment.Text); ok {
 		return false
 	}
 	_, indent := lineIndent(source, fileSet.Position(comment.Pos()).Offset)

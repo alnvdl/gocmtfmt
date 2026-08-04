@@ -7,10 +7,6 @@
 paragraphs and lists while preserving headings, code blocks, and other
 elements. It formats, but does **not** wrap regular code.
 
-`/* ... */` comment blocks are intentionally ignored, so users can keep them
-for things that should not be formatted. This is useful, for example, when
-commenting out code blocks.
-
 `gocmtfmt` has three goals:
 1. Make comments more readable by limiting the number of columns.
 2. Reduce surprises by making comments in code look more like the output of
@@ -57,7 +53,12 @@ available space.
 
 This tool is opinionated in the following ways:
 
-1. Unused [link definitions](https://go.dev/doc/comment#links) will be removed
+1. `/* ... */` comment blocks are intentionally ignored, so users can keep them
+   for things that should not be formatted. This is useful, for example, when
+   commenting out code blocks. It also means your code must use // comments for
+   the majority of things.
+
+2. Unused [link definitions](https://go.dev/doc/comment#links) will be removed
    from comments.
 
 2. Sequential lines without line breaks and poorly formatted lists are joined.
