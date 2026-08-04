@@ -112,7 +112,7 @@ func lineCommentGroups(file *ast.File, fileSet *token.FileSet, source []byte) []
 
 	for _, group := range file.Comments {
 		for _, comment := range group.List {
-			if isLineComment(comment) {
+			if isLineComment(comment, fileSet, source) {
 				if len(current) > 0 && !commentsAreAdjacent(current[len(current)-1], comment, fileSet, source) {
 					flush()
 				}
@@ -126,8 +126,12 @@ func lineCommentGroups(file *ast.File, fileSet *token.FileSet, source []byte) []
 	return groups
 }
 
-func isLineComment(comment *ast.Comment) bool {
-	return strings.HasPrefix(comment.Text, "//") && !isDirective(comment)
+func isLineComment(comment *ast.Comment, fileSet *token.FileSet, source []byte) bool {
+	if !strings.HasPrefix(comment.Text, "//") || isDirective(comment) {
+		return false
+	}
+	_, indent := lineIndent(source, fileSet.Position(comment.Pos()).Offset)
+	return indent != nil
 }
 
 func commentsAreAdjacent(previous, current *ast.Comment, fileSet *token.FileSet, source []byte) bool {

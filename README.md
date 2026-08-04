@@ -74,3 +74,11 @@ language constructs.
    displays it in text mode. It is based on a slightly modified version of the
    standard library's text comment printer:
    https://pkg.go.dev/go/doc/comment.
+
+3. Trailing comments are not reformatted or reflowed:
+   ```go
+	var value = 1 // This comment will be ignored even though it is longer than the column limit.
+   ```
+
+   This is intentional: Go does not format trailing comments with multiple
+   lines in a nice way.

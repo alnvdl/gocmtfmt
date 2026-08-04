@@ -39,35 +39,56 @@ func Example() {}
 var value = 1
 `,
 	}, {
-		desc:     "formats ordinary line comment blocks after a line",
+		desc:     "does not format a single trailing comment",
 		tabWidth: 4,
 		source: `
 package sample
 
-func Example() {} // This should not be ignored because it is considered a valid line comment block.
+func Example() {} // This should be ignored because it is just a comment after a line.
 `,
 		want: `
 package sample
 
-func Example() {} // This should not be ignored because it is considered a
-// valid line comment block.
+func Example() {} // This should be ignored because it is just a comment after a line.
 `,
 	}, {
-		desc:     "formats multiple ordinary line comment blocks after lines",
+		desc:     "does not format multiple trailing comments",
 		tabWidth: 4,
 		source: `
 package sample
 
-func Example() {} // this is something.
+func Example() {} // this is something quite long that goes beyond the column limit.
 func Example2() {} // this is something else.
 func Example3() {} // yet one more.
 `,
 		want: `
 package sample
 
-func Example()  {} // this is something.
+func Example()  {} // this is something quite long that goes beyond the column limit.
 func Example2() {} // this is something else.
 func Example3() {} // yet one more.
+`,
+	}, {
+		desc:     "handles multi-line trailing comments",
+		tabWidth: 4,
+		source: `
+package sample
+
+func Example() {
+	var value = 1 // First line of a trailing comment that is quite long indeed and exceeds the column limit.
+	              // Second line of the trailing comment, also quite long here, passing the column limit.
+	_ = value
+}
+`,
+		want: `
+package sample
+
+func Example() {
+	var value = 1 // First line of a trailing comment that is quite long indeed and exceeds the column limit.
+	// Second line of the trailing comment, also quite long here, passing the
+	// column limit.
+	_ = value
+}
 `,
 	}, {
 		desc:     "preserves directives",
@@ -340,28 +361,6 @@ func Example() {
 	// wrapped. This continuation line was indented with spaces instead of a
 	// tab character.
 	_ = 1
-}
-`,
-	}, {
-		desc:     "handles multi-line trailing comments",
-		tabWidth: 4,
-		source: `
-package sample
-
-func Example() {
-	var value = 1 // First line of a trailing comment that is quite long indeed.
-	              // Second line of the trailing comment, also quite long here.
-	_ = value
-}
-`,
-		want: `
-package sample
-
-func Example() {
-	var value = 1 // First line of a trailing comment that is quite long
-	// indeed. Second line of the trailing comment, also quite
-	// long here.
-	_ = value
 }
 `,
 	}, {
