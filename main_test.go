@@ -1,0 +1,175 @@
+package main
+
+import (
+	"os"
+	"strings"
+	"testing"
+)
+
+func TestRunFormatsStdin(t *testing.T) {
+	setStreams(t, "package sample\n\n// This comment is long enough to wrap at a narrow width.\nvar value int\n")
+
+	if status := run([]string{"-c", "50"}); status != 0 {
+		t.Fatalf("run() status = %d, want 0", status)
+	}
+
+	got := readStream(t, stdout)
+	want := "package sample\n\n// This comment is long enough to wrap at a narrow\n// width.\nvar value int\n"
+	if got != want {
+		t.Errorf("formatted stdin = %q, want %q", got, want)
+	}
+}
+
+func TestMainExitsWithRunnerStatus(t *testing.T) {
+	setStreams(t, "package sample\n")
+	oldArgs, oldExit := os.Args, exit
+	t.Cleanup(func() {
+		os.Args, exit = oldArgs, oldExit
+	})
+	os.Args = []string{"gocmtfmt", "-c", "0"}
+	var gotStatus int
+	exit = func(status int) {
+		gotStatus = status
+	}
+
+	main()
+
+	if gotStatus != 2 {
+		t.Errorf("exit status = %d, want 2", gotStatus)
+	}
+}
+
+func TestRunListsChangedStdinWithoutWritingOutput(t *testing.T) {
+	setStreams(t, "package sample\n\n// This comment is long enough to wrap at a narrow width.\nvar value int\n")
+
+	if status := run([]string{"-l", "-c", "50"}); status != 0 {
+		t.Fatalf("run() status = %d, want 0", status)
+	}
+	if got := readStream(t, stdout); got != "" {
+		t.Errorf("stdout = %q, want empty output", got)
+	}
+}
+
+func TestRunFormatsPaths(t *testing.T) {
+	setStreams(t, "")
+	path := writeTempSource(t, "package sample\n\n// This comment is long enough to wrap at a narrow width.\nvar value int\n")
+
+	if status := run([]string{"-c", "50", path}); status != 0 {
+		t.Fatalf("run() status = %d, want 0", status)
+	}
+	if got := readStream(t, stdout); !strings.Contains(got, "// This comment is long enough to wrap at a narrow\n") {
+		t.Errorf("stdout does not contain formatted source: %q", got)
+	}
+
+	resetStream(t, stdout)
+	if status := run([]string{"-l", "-c", "50", path}); status != 0 {
+		t.Fatalf("run() status = %d, want 0", status)
+	}
+	if got := readStream(t, stdout); got != path+"\n" {
+		t.Errorf("listed paths = %q, want %q", got, path+"\n")
+	}
+
+	resetStream(t, stdout)
+	if status := run([]string{"-w", "-c", "50", path}); status != 0 {
+		t.Fatalf("run() status = %d, want 0", status)
+	}
+	if got := readFile(t, path); !strings.Contains(got, "// This comment is long enough to wrap at a narrow\n") {
+		t.Errorf("written source is not formatted: %q", got)
+	}
+}
+
+func TestRunReportsCommandLineErrors(t *testing.T) {
+	tests := []struct {
+		name       string
+		args       []string
+		wantStatus int
+		want       string
+	}{
+		{name: "invalid width", args: []string{"-c", "0"}, wantStatus: 2, want: "error: -c and -t must be greater than zero\n"},
+		{name: "write stdin", args: []string{"-w"}, wantStatus: 2, want: "error: cannot use -w with standard input\n"},
+		{name: "missing file", args: []string{"missing.go"}, wantStatus: 1, want: "missing.go:"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			setStreams(t, "package sample\n")
+			if status := run(test.args); status != test.wantStatus {
+				t.Fatalf("run() status = %d, want %d", status, test.wantStatus)
+			}
+			if got := readStream(t, stderr); !strings.Contains(got, test.want) {
+				t.Errorf("stderr = %q, want substring %q", got, test.want)
+			}
+		})
+	}
+}
+
+func setStreams(t *testing.T, input string) {
+	t.Helper()
+	oldStdin, oldStdout, oldStderr := stdin, stdout, stderr
+	inputFile := writeTempFile(t, input)
+	stdin = inputFile
+	stdout = newTempFile(t)
+	stderr = newTempFile(t)
+	t.Cleanup(func() {
+		stdin, stdout, stderr = oldStdin, oldStdout, oldStderr
+	})
+}
+
+func writeTempSource(t *testing.T, source string) string {
+	t.Helper()
+	file := writeTempFile(t, source)
+	path := file.Name()
+	file.Close()
+	return path
+}
+
+func writeTempFile(t *testing.T, content string) *os.File {
+	t.Helper()
+	file, err := os.CreateTemp(t.TempDir(), "gocmtfmt-test-*")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := file.WriteString(content); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := file.Seek(0, 0); err != nil {
+		t.Fatal(err)
+	}
+	return file
+}
+
+func newTempFile(t *testing.T) *os.File {
+	t.Helper()
+	return writeTempFile(t, "")
+}
+
+func resetStream(t *testing.T, file *os.File) {
+	t.Helper()
+	if err := file.Truncate(0); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := file.Seek(0, 0); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func readStream(t *testing.T, file *os.File) string {
+	t.Helper()
+	if _, err := file.Seek(0, 0); err != nil {
+		t.Fatal(err)
+	}
+	content, err := os.ReadFile(file.Name())
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(content)
+}
+
+func readFile(t *testing.T, path string) string {
+	t.Helper()
+	content, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(content)
+}
