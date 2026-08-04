@@ -63,8 +63,8 @@ This tool is opinionated in the following ways:
 1. Unused [link definitions](https://go.dev/doc/comment#links) will be removed
    from comments.
 
-2. Separate-looking paragraphs are joined. Consider the following comment
-   block:
+2. Sequential lines without line breaks are joined. Consider the following
+   comment block:
    ```go
    // FunctionA accepts one of three types of input.
    // Input A causes it to do one thing.
@@ -78,12 +78,13 @@ This tool is opinionated in the following ways:
    ```
 
    This is intentional: `gocmtfmt` formats documentation similarly to how
-   `go doc` and `pkgsite` present it.
+   `go doc` and `pkgsite` present it, and sequential lines without line breaks
+   define a single paragraph.
 
 3. Trailing comments are not reformatted or reflowed:
    ```go
 	var value = 1 // This comment will be ignored even though it is longer than the column limit.
    ```
 
-   This is intentional: Go does not format trailing comments with multiple
-   lines in a nice way.
+   This is intentional: Go's default formatting does not deal with multiline
+   trailing comments.
