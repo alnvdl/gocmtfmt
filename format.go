@@ -122,11 +122,19 @@ func lineCommentGroups(file *ast.File, fileSet *token.FileSet, source []byte) []
 	return groups
 }
 
-func isLineComment(comment *ast.Comment, fileSet *token.FileSet, source []byte) bool {
-	if !strings.HasPrefix(comment.Text, "//") {
-		return false
+func isDirective(comment *ast.Comment) bool {
+	// See: https://go.dev/doc/comment#directives
+	if strings.HasPrefix(comment.Text, "//line ") ||
+		strings.HasPrefix(comment.Text, "//extern ") ||
+		strings.HasPrefix(comment.Text, "//export ") {
+		return true
 	}
-	if _, ok := ast.ParseDirective(comment.Slash, comment.Text); ok {
+	_, ok := ast.ParseDirective(comment.Slash, comment.Text)
+	return ok
+}
+
+func isLineComment(comment *ast.Comment, fileSet *token.FileSet, source []byte) bool {
+	if !strings.HasPrefix(comment.Text, "//") || isDirective(comment) {
 		return false
 	}
 	_, indent := lineIndent(source, fileSet.Position(comment.Pos()).Offset)

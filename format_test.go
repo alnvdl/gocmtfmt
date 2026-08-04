@@ -2,11 +2,40 @@ package main
 
 import (
 	"fmt"
+	"go/ast"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 )
+
+func TestIsDirective(t *testing.T) {
+	tests := []struct {
+		text string
+		want bool
+	}{
+		{text: "//line file.go:10", want: true},
+		{text: "//extern name", want: true},
+		{text: "//export name", want: true},
+		{text: "//go:generate go run example.go", want: true},
+		{text: "//foo:bar", want: true},
+		{text: "//toolname:directive arguments", want: true},
+		{text: "//tool2:directive-name arguments", want: true},
+		{text: "//foo", want: false},
+		{text: "//Foo:bar", want: false},
+		{text: "//foo:Bar", want: false},
+		{text: "//foo:", want: false},
+	}
+
+	for _, test := range tests {
+		t.Run(test.text, func(t *testing.T) {
+			got := isDirective(&ast.Comment{Text: test.text})
+			if got != test.want {
+				t.Errorf("isDirective(%q) = %t, want %t", test.text, got, test.want)
+			}
+		})
+	}
+}
 
 func TestFormatSourceAndFile(t *testing.T) {
 	tests := []struct {
@@ -101,6 +130,19 @@ func Example() {
 package sample
 
 //go:generate go run example.go
+//line file.go:10
+//extern name
+//export name
+//foo:bar
+//toolname:directive arguments This tool directive is deliberately long enough to trigger a line break if the formatter treats it as prose.
+//tool2:directive-name arguments
+//foo
+
+//Foo:bar
+
+//foo:Bar
+
+//foo:
 `,
 		want: `
 // Package abc does something. No space after the marker is insignificant here.
@@ -110,6 +152,19 @@ package sample
 package sample
 
 //go:generate go run example.go
+//line file.go:10
+//extern name
+//export name
+//foo:bar
+//toolname:directive arguments This tool directive is deliberately long enough to trigger a line break if the formatter treats it as prose.
+//tool2:directive-name arguments
+// foo
+
+// Foo:bar
+
+// foo:Bar
+
+// foo:
 `,
 	}, {
 		desc:     "ignores block comments",

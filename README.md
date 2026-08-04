@@ -10,7 +10,7 @@ elements. It formats, but does **not** wrap regular code.
 `gocmtfmt` has three goals:
 1. Make comments more readable by limiting the number of columns.
 2. Reduce surprises by making comments in code look more like the output of
-   tools such as `go doc` and `pkgsite` (see [Notes](#Notes)).
+   tools such as `go doc` and `pkgsite` (see [Notes](#notes)).
 3. Keep codebases more consistent by introducing an opinionated and unambiguous
    way of formatting comments.
 
@@ -29,7 +29,7 @@ gocmtfmt -w file.go # Formats a single file.
 
 ## Comparison with gofmt
 
-`gocmtfmt` complements `gofmt`, it is not a replacement. It applies the same
+`gocmtfmt` complements `gofmt`; it is not a replacement. It applies the same
 formatting as `gofmt` before and after processing each input file, but you can
 still continue to use `gofmt` in your pipeline if you like.
 
@@ -37,9 +37,9 @@ still continue to use `gofmt` in your pipeline if you like.
 column width (`-c`, defaults to 79) and a tab size (`-t`, defaults to 4).
 
 Unlike `gofmt`/`go fmt`:
-- it formats all `//` comment blocks as
+- it formats (almost) all `//` comment blocks as
   [Go doc comments](https://go.dev/doc/comment), not just those tied to certain
-  language constructs.
+  language constructs. Trailing and directive comments are excluded.
 - it does not format files marked with `DO NOT EDIT` in their first line.
 - it does not support the `./...` syntax used by the native `go fmt` tool.
   Instead, it works like plain `gofmt`.
@@ -54,14 +54,13 @@ available space.
 This tool is opinionated in the following ways:
 
 1. `/* ... */` comment blocks are intentionally ignored, so users can keep them
-   for things that should not be formatted. This is useful, for example, when
-   commenting out code blocks. It also means your code must use // comments for
-   the majority of things.
+   for comments that should not be formatted. This is useful, for example, when
+   commenting out code blocks.
 
 2. Unused [link definitions](https://go.dev/doc/comment#links) will be removed
    from comments.
 
-2. Sequential lines without line breaks and poorly formatted lists are joined.
+3. Sequential lines without blank lines and poorly formatted lists are joined.
    Consider the following comment block:
    ```go
    // FunctionA accepts two types of input.
@@ -84,10 +83,10 @@ This tool is opinionated in the following ways:
    and `pkgsite` present it. See [Go Doc Comments](https://go.dev/doc/comment)
    to learn how to format your comments the Go way.
 
-3. Trailing comments are not formatted or wrapped:
+4. Trailing comments are not formatted or wrapped:
    ```go
 	var value = 1 // This comment will be ignored even though it is longer than the column limit.
    ```
 
-   Thisi s because Go's default formatting does not deal with multiline
+   This is because Go's default formatting does not deal with multiline
    trailing comments, indenting subsequent lines as unrelated comment blocks.
