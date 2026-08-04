@@ -66,15 +66,15 @@ This tool is opinionated in the following ways:
 2. Sequential lines without line breaks are joined. Consider the following
    comment block:
    ```go
-   // FunctionA accepts one of three types of input.
+   // FunctionA accepts two types of input.
    // Input A causes it to do one thing.
    // Input B causes it to do something else.
    ```
 
    It is reformatted as:
    ```go
-   // FunctionA accepts one of three types of input. Input A causes it to do
-   // one thing. Input B causes it to do something else.
+   // FunctionA accepts two types of input. Input A causes it to do one thing.
+   // Input B causes it to do something else.
    ```
 
    This is intentional: `gocmtfmt` formats documentation similarly to how
