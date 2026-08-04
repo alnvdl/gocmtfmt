@@ -1,50 +1,53 @@
 # gocmtfmt
 
-`gocmtfmt` wraps the content of all `//` Go comment blocks. It mainly reformats
-paragraphs and lists, keeping titles, code blocks and other elements as they
-are.
+[![Go Reference](https://pkg.go.dev/badge/github.com/alnvdl/gocmtfmt.svg)](https://pkg.go.dev/github.com/alnvdl/gocmtfmt)
+[![Test workflow](https://github.com/alnvdl/gocmtfmt/actions/workflows/test.yaml/badge.svg)](https://github.com/alnvdl/gocmtfmt/actions/workflows/test.yaml)
 
-`/* ... */` comments blocks are intentionally ignored, as a way to allow for
-users to have comment blocks that are not subject to reformatting. This can be
-useful when commenting out code blocks for example.
+`gocmtfmt` wraps the content of all `//` Go comment blocks. It mainly reflows
+paragraphs and lists while preserving headings, code blocks, and other
+elements. It does **not** reflow code.
 
-`gocmtfmt` exists for three reasons:
-1. Limiting the number of columns makes text more readable.
-2. Reformatting makes comments in code look a lot more like what tools like
-   `go doc` and `pkgsite` produce, leading to fewer surprises
-   (see [Notes](#Notes)).
-3. Manually managing line breaks and identifying offending files is a pain.
+`/* ... */` comment blocks are intentionally ignored, so users can keep comment
+blocks that should not be reformatted. This is useful, for example, when
+commenting out code blocks.
+
+`gocmtfmt` has three goals:
+1. Limit the number of columns to make comments more readable.
+2. Make code comments look more like the output of tools such as `go doc` and
+   `pkgsite` to reduce surprises (see [Notes](#Notes)).
+3. Avoid the hassle of managing line breaks manually and finding files that
+   need reformatting to keep codebases more consistent.
 
 ## Using
 
-Install with:
+Install it with:
 ```sh
 go install github.com/alnvdl/gocmtfmt@latest
 ```
 
-And run with
+Then run it with:
 ```sh
 gocmtfmt -w file.go
 ```
 
-Or to run in all files in a module:
+To run it on all files in a module:
 ```sh
-find . -name '*.go' | xargs cmtfmt -w
+find . -name '*.go' | xargs gocmtfmt -w
 ```
 
-`gocmtfmt` does not support the `./...` syntax used by native `go fmt` tooling;
-instead, it mimics plain `gofmt`.
+`gocmtfmt` does not support the `./...` syntax used by native `go fmt` tools.
+Instead, it works like plain `gofmt`.
 
 ## Comparison to gofmt
 
-`gocmtfmt` is meant to be used as a complement to `gofmt` not as a replacement:
-it will invoke the same behavior of `gofmt` before and after on every input it
-processes, and you can still keep `gofmt` in your pipeline.
+`gocmtfmt` complements `gofmt`; it is not a replacement. It applies the same
+formatting as `gofmt` before and after processing each input file, but you can
+still continue to use `gofmt` in your pipeline if you like.
 
 `gocmtfmt` supports the `-l` and `-w` flags like `gofmt`, and it also accepts a
 column width (`-c`, defaults to 79) and a tab size (`-t`, defaults to 4).
 
-Differently from `gofmt`, it reformats all `//` comment blocks as
+Unlike `gofmt`, it reformats all `//` comment blocks as
 [Go doc comments](https://go.dev/doc/comment), not just those tied to certain
 language constructs.
 
@@ -53,20 +56,22 @@ language constructs.
 1. Unused [link definitions](https://go.dev/doc/comment#links) will be removed
    from comments.
 
-2. Fake paragraphs are joined. Consider the comment block below:
+2. Separate-looking paragraphs are joined. Consider the following comment
+   block:
    ```go
-   // FunctionA does accepts one of 3 types of input.
-   // Input A will cause it to do something.
-   // Input B will cause it to do something else.
+   // FunctionA accepts one of three types of input.
+   // Input A causes it to do one thing.
+   // Input B causes it to do something else.
    ```
 
-   It will get reformatted as:
+   It is reformatted as:
    ```go
-   // FunctionA does accepts one of 3 types of input. Input A will cause it to
-   // do something. Input B will cause it to do something else.
+   // FunctionA accepts one of three types of input. Input A causes it to do
+   // one thing. Input B causes it to do something else.
    ```
 
-   This is by design, as `gocmtfmt` formats documentation exactly like `go doc`
-   would display them in text mode. In fact, it is based on (a slightly
-   modified version of) the text comment printer of the standard library:
+   This is intentional: `gocmtfmt` formats documentation exactly as `go doc`
+   displays it in text mode. It is based on a slightly modified version of the
+   standard library's text comment printer:
    https://pkg.go.dev/go/doc/comment.
+
